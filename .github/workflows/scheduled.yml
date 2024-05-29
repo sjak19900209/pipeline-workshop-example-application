@@ -1,4 +1,4 @@
-name: nightly build at 11pm
+name: test scheduled run
 
 on:
   schedule:
