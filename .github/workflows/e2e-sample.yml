@@ -77,3 +77,35 @@ jobs:
           port: ${{ env.UAT_PORT }}
           source: './target/digibank.war'
           target: 'deployment'
+
+           ### Install STEP ###
+  install:
+    needs: [build_and_test_and_deploy]
+    environment: UAT
+    name: Install Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.UAT_IP }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ env.UAT_PORT }}
+          script: cp -f /home/ec2-user/deployment/target/digibank.war ${{ env.UAT_TOMCAT }}
+          
+  automation_tests:
+    needs: install
+    environment: UAT
+    name: Trigger E2E Tests on UAT Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Workflow from e2e tests with Playwright
+        run: |
+          curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.PAT }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/e2e-pipeline-workshop/digibank-playwright-tests/dispatches \
+          -d  '{"event_type": "trigger-tests", "client_payload" : { "sut" : "${{ env.UAT_IP }}" } }'
